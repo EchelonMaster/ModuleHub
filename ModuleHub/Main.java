@@ -240,11 +240,15 @@ public class Main extends AbstractModule {
         if (dashIndex > 0) {
             String mainPart = repoName.substring(0, dashIndex);
             String secondary = repoName.substring(dashIndex + 1).trim();
-            return mainPart + " (" + secondary + ")";
-        } else {
-            return repoName;
+            
+            // Transform only if the secondary part is "Legacy"
+            if (secondary.equalsIgnoreCase("Legacy")) {
+                return mainPart + " (" + secondary + ")";
+            }
         }
+        return repoName;  // Return the original if no transformation is needed
     }
+
 
     private void populateVersionList() {
         versionListModel.clear();
