@@ -240,14 +240,17 @@ public class Main extends AbstractModule {
         if (dashIndex > 0) {
             String mainPart = repoName.substring(0, dashIndex);
             String secondary = repoName.substring(dashIndex + 1).trim();
-            
-            // Transform only if the secondary part is "Legacy"
+            // Only add parentheses if the secondary part is "Legacy"
             if (secondary.equalsIgnoreCase("Legacy")) {
                 return mainPart + " (" + secondary + ")";
+            } else {
+                return mainPart + " " + secondary;
             }
+        } else {
+            return repoName;
         }
-        return repoName;  // Return the original if no transformation is needed
     }
+
 
 
     private void populateVersionList() {
@@ -347,10 +350,13 @@ public class Main extends AbstractModule {
             JSONObject versionObj = versions.getJSONObject(versionIndex);
             String description = versionObj.optString("description", "No description available.");
             descriptionArea.setText(description);
+            // Set caret position to the top so that the beginning of the description is visible.
+            descriptionArea.setCaretPosition(0);
         } catch (JSONException ex) {
             ex.printStackTrace();
         }
     }
+
 
     private String fetchContentFromURL(String urlStr) throws Exception {
         StringBuilder sb = new StringBuilder();
