@@ -153,24 +153,33 @@ public class Main extends AbstractModule {
                             JSONArray releases = new JSONArray(manifestJson);
                             for (int i = 0; i < releases.length(); i++) {
                                 JSONObject release = releases.getJSONObject(i);
+                                
+                                // Get both tag and release name.
                                 String tagName = release.optString("tag_name", "unknown");
+                                String releaseName = release.optString("name", "").trim();
+                                if (releaseName.isEmpty()) {
+                                    releaseName = "Unknown Release Title";
+                                }
+                                // Build a combined display string.
+                                String displayName = releaseName + " (" + tagName + ")";
+                                
                                 // Extract module name from the URL.
                                 String moduleName = extractRepositoryName(link);
                                 String description = release.optString("body", "No description available.");
-                                
+
                                 // Check compatibility by searching for the marker.
                                 String compatibilityMarker = "#AbstractModule-" + getVersion();
                                 boolean isCompatible = description.contains(compatibilityMarker);
                                 if (!isCompatible) {
-                                    tagName = tagName + " (incompatible)";
+                                    displayName = displayName + " (incompatible)";
                                 }
-                                
+
                                 String zipUrl = release.optString("zipball_url", "");
                                 String htmlUrl = release.optString("html_url", "No URL available.");
 
                                 // Create the version object.
                                 JSONObject versionObj = new JSONObject();
-                                versionObj.put("version", tagName);
+                                versionObj.put("version", displayName);
                                 versionObj.put("downloadUrl", zipUrl);
                                 versionObj.put("description", description + "\n\nGitHub URL: " + htmlUrl);
 
@@ -190,7 +199,7 @@ public class Main extends AbstractModule {
                                     // Create a new module object.
                                     JSONObject moduleObj = new JSONObject();
                                     moduleObj.put("name", moduleName);
-                                    moduleObj.put("latestVersion", tagName);
+                                    moduleObj.put("latestVersion", displayName);
                                     JSONArray versionsArray = new JSONArray();
                                     versionsArray.put(versionObj);
                                     moduleObj.put("versions", versionsArray);
@@ -251,8 +260,6 @@ public class Main extends AbstractModule {
         }
     }
 
-
-
     private void populateVersionList() {
         versionListModel.clear();
         int moduleIndex = moduleList.getSelectedIndex();
@@ -261,7 +268,7 @@ public class Main extends AbstractModule {
             JSONObject moduleObj = modulesArray.getJSONObject(moduleIndex);
             JSONArray versions = moduleObj.getJSONArray("versions");
             int bestIndex = -1;
-            String bestVersion = "";
+            String bestTag = "";
             for (int i = 0; i < versions.length(); i++) {
                 JSONObject versionObj = versions.getJSONObject(i);
                 String versionStr = versionObj.optString("version", "Unknown");
@@ -270,17 +277,19 @@ public class Main extends AbstractModule {
                 // Determine compatibility: if version string contains " (incompatible)", it's not compatible.
                 boolean isCompatible = !versionStr.contains(" (incompatible)");
                 // Remove the incompatibility suffix for comparison.
-                String cleanVersion = versionStr.replace(" (incompatible)", "").trim();
+                String cleanDisplay = versionStr.replace(" (incompatible)", "").trim();
+                // Extract just the tag (i.e. text between parentheses) for comparison.
+                String currentTag = extractTag(cleanDisplay);
                 if (isCompatible) {
                     if (bestIndex == -1) {
                         bestIndex = i;
-                        bestVersion = cleanVersion;
+                        bestTag = currentTag;
                     } else {
-                        // Compare versions semantically.
-                        int cmp = compareVersions(cleanVersion, bestVersion);
+                        // Compare using only the tag portion.
+                        int cmp = compareVersions(currentTag, bestTag);
                         if (cmp > 0) {
                             bestIndex = i;
-                            bestVersion = cleanVersion;
+                            bestTag = currentTag;
                         }
                     }
                 }
@@ -295,6 +304,19 @@ public class Main extends AbstractModule {
         } catch (JSONException ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Extracts the tag from a display string.
+     * For example, for "Initial Release (v1.0.0)" it returns "v1.0.0".
+     */
+    private String extractTag(String display) {
+        int open = display.indexOf('(');
+        int close = display.indexOf(')');
+        if (open != -1 && close != -1 && close > open) {
+            return display.substring(open + 1, close);
+        }
+        return display;
     }
 
     /**
@@ -336,7 +358,6 @@ public class Main extends AbstractModule {
         }
     }
 
-
     private void updateDescription() {
         int moduleIndex = moduleList.getSelectedIndex();
         int versionIndex = versionList.getSelectedIndex();
@@ -356,7 +377,6 @@ public class Main extends AbstractModule {
             ex.printStackTrace();
         }
     }
-
 
     private String fetchContentFromURL(String urlStr) throws Exception {
         StringBuilder sb = new StringBuilder();
@@ -430,7 +450,6 @@ public class Main extends AbstractModule {
             }
         }).start();
     }
-
 
     private void downloadFile(String urlStr, File destination) throws Exception {
         URL url = new URL(urlStr);
