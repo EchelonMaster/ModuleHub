@@ -226,7 +226,6 @@ public class Main extends AbstractModule {
         }
     }
 
-
     private String extractRepositoryName(String url) {
         try {
             URL parsedUrl = new URL(url);
